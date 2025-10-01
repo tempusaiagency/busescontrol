@@ -155,7 +155,7 @@ const Buses: React.FC = () => {
                   <div className="flex items-center space-x-2 text-gray-600">
                     <DollarSign className="h-4 w-4" />
                     <span className="text-sm">
-                      ${bus.fare_per_passenger.toLocaleString()} por pasajero
+                      ₲{bus.fare_per_passenger.toLocaleString('es-PY')} por pasajero
                     </span>
                   </div>
 

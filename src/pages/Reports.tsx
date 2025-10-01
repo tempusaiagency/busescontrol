@@ -254,7 +254,7 @@ const Reports: React.FC = () => {
             </div>
             <div className="ml-4">
               <h4 className="text-2xl font-bold text-gray-900">
-                ${summaryStats.totalRevenue.toLocaleString()}
+                ₲{summaryStats.totalRevenue.toLocaleString('es-PY')}
               </h4>
               <p className="text-sm text-gray-600">Total Ingresos</p>
             </div>
@@ -268,7 +268,7 @@ const Reports: React.FC = () => {
             </div>
             <div className="ml-4">
               <h4 className="text-2xl font-bold text-gray-900">
-                ${summaryStats.totalExpenses.toLocaleString()}
+                ₲{summaryStats.totalExpenses.toLocaleString('es-PY')}
               </h4>
               <p className="text-sm text-gray-600">Total Gastos</p>
             </div>
@@ -286,7 +286,7 @@ const Reports: React.FC = () => {
             </div>
             <div className="ml-4">
               <h4 className={`text-2xl font-bold ${profitMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                ${summaryStats.totalProfit.toLocaleString()}
+                ₲{summaryStats.totalProfit.toLocaleString('es-PY')}
               </h4>
               <p className="text-sm text-gray-600">
                 Utilidad ({profitMargin.toFixed(1)}%)
@@ -308,10 +308,10 @@ const Reports: React.FC = () => {
                 <LineChart data={reportData as any[]}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
-                  <YAxis tickFormatter={(value) => `$${value}k`} />
-                  <Tooltip 
+                  <YAxis tickFormatter={(value) => `₲${value}k`} />
+                  <Tooltip
                     formatter={(value: number, name: string) => [
-                      `$${(value * 1000).toLocaleString()}`,
+                      `₲${(value * 1000).toLocaleString('es-PY')}`,
                       name === 'revenue' ? 'Ingresos' : name === 'expenses' ? 'Gastos' : 'Utilidad'
                     ]}
                     labelFormatter={(label) => `Fecha: ${label}`}
@@ -354,10 +354,10 @@ const Reports: React.FC = () => {
               <BarChart data={reportData as any[]}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="busName" />
-                <YAxis tickFormatter={(value) => `$${value}k`} />
-                <Tooltip 
+                <YAxis tickFormatter={(value) => `₲${value}k`} />
+                <Tooltip
                   formatter={(value: number, name: string) => [
-                    `$${(value * 1000).toLocaleString()}`,
+                    `₲${(value * 1000).toLocaleString('es-PY')}`,
                     name === 'revenue' ? 'Ingresos' : name === 'expenses' ? 'Gastos' : 'Utilidad'
                   ]}
                 />
@@ -436,15 +436,15 @@ const Reports: React.FC = () => {
                         {(item as any).passengers}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                        ${((item as any).revenue * 1000).toLocaleString()}
+                        ₲{((item as any).revenue * 1000).toLocaleString('es-PY')}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">
-                        ${((item as any).expenses * 1000).toLocaleString()}
+                        ₲{((item as any).expenses * 1000).toLocaleString('es-PY')}
                       </td>
                       <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
                         (item as any).profit >= 0 ? 'text-green-600' : 'text-red-600'
                       }`}>
-                        ${((item as any).profit * 1000).toLocaleString()}
+                        ₲{((item as any).profit * 1000).toLocaleString('es-PY')}
                       </td>
                     </>
                   ) : (
@@ -456,15 +456,15 @@ const Reports: React.FC = () => {
                         {(item as any).passengers}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                        ${((item as any).revenue * 1000).toLocaleString()}
+                        ₲{((item as any).revenue * 1000).toLocaleString('es-PY')}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">
-                        ${((item as any).expenses * 1000).toLocaleString()}
+                        ₲{((item as any).expenses * 1000).toLocaleString('es-PY')}
                       </td>
                       <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
                         (item as any).profit >= 0 ? 'text-green-600' : 'text-red-600'
                       }`}>
-                        ${((item as any).profit * 1000).toLocaleString()}
+                        ₲{((item as any).profit * 1000).toLocaleString('es-PY')}
                       </td>
                       <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
                         (item as any).profitMargin >= 0 ? 'text-green-600' : 'text-red-600'

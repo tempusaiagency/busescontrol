@@ -191,7 +191,7 @@ const Expenses: React.FC = () => {
               </div>
               <div className="ml-4">
                 <h4 className="text-2xl font-bold text-gray-900">
-                  ${(dailyTotals.total || 0).toLocaleString()}
+                  ₲{(dailyTotals.total || 0).toLocaleString('es-PY')}
                 </h4>
                 <p className="text-sm text-gray-600">Total Gastos</p>
               </div>
@@ -205,7 +205,7 @@ const Expenses: React.FC = () => {
               </div>
               <div className="ml-4">
                 <h4 className="text-2xl font-bold text-gray-900">
-                  ${(dailyTotals.fuel || 0).toLocaleString()}
+                  ₲{(dailyTotals.fuel || 0).toLocaleString('es-PY')}
                 </h4>
                 <p className="text-sm text-gray-600">Combustible</p>
               </div>
@@ -219,7 +219,7 @@ const Expenses: React.FC = () => {
               </div>
               <div className="ml-4">
                 <h4 className="text-2xl font-bold text-gray-900">
-                  ${(dailyTotals.maintenance || 0).toLocaleString()}
+                  ₲{(dailyTotals.maintenance || 0).toLocaleString('es-PY')}
                 </h4>
                 <p className="text-sm text-gray-600">Mantenimiento</p>
               </div>
@@ -233,7 +233,7 @@ const Expenses: React.FC = () => {
               </div>
               <div className="ml-4">
                 <h4 className="text-2xl font-bold text-gray-900">
-                  ${(dailyTotals.salary || 0).toLocaleString()}
+                  ₲{(dailyTotals.salary || 0).toLocaleString('es-PY')}
                 </h4>
                 <p className="text-sm text-gray-600">Sueldos</p>
               </div>
@@ -286,7 +286,7 @@ const Expenses: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    ${expense.amount.toLocaleString()}
+                    ₲{expense.amount.toLocaleString('es-PY')}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     {expense.description}

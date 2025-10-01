@@ -311,7 +311,7 @@ const Inventory: React.FC = () => {
             <div>
               <p className="text-sm text-gray-600">Valor Total</p>
               <p className="text-2xl font-bold text-gray-900">
-                ${totalValue.toLocaleString('es-CO')}
+                ₲{totalValue.toLocaleString('es-PY')}
               </p>
             </div>
             <TrendingUp className="h-12 w-12 text-green-500" />
@@ -439,10 +439,10 @@ const Inventory: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${item.unit_cost.toLocaleString('es-CO')}
+                    ₲{item.unit_cost.toLocaleString('es-PY')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    ${(item.quantity * item.unit_cost).toLocaleString('es-CO')}
+                    ₲{(item.quantity * item.unit_cost).toLocaleString('es-PY')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {item.location || '-'}

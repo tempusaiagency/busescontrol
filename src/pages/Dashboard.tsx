@@ -135,7 +135,7 @@ const Dashboard: React.FC = () => {
                     Ingresos Hoy
                   </dt>
                   <dd className="text-2xl font-bold text-gray-900">
-                    ${todayMetrics.revenue.toLocaleString()}
+                    ₲{todayMetrics.revenue.toLocaleString('es-PY')}
                   </dd>
                 </dl>
               </div>
@@ -155,7 +155,7 @@ const Dashboard: React.FC = () => {
                     Gastos Hoy
                   </dt>
                   <dd className="text-2xl font-bold text-gray-900">
-                    ${todayMetrics.expenses.toLocaleString()}
+                    ₲{todayMetrics.expenses.toLocaleString('es-PY')}
                   </dd>
                 </dl>
               </div>
@@ -175,7 +175,7 @@ const Dashboard: React.FC = () => {
                     Utilidad Hoy
                   </dt>
                   <dd className={`text-2xl font-bold ${todayMetrics.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    ${todayMetrics.profit.toLocaleString()}
+                    ₲{todayMetrics.profit.toLocaleString('es-PY')}
                   </dd>
                 </dl>
               </div>
@@ -196,9 +196,9 @@ const Dashboard: React.FC = () => {
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
-                <YAxis tickFormatter={(value) => `$${value}k`} />
-                <Tooltip 
-                  formatter={(value: number) => [`$${value.toFixed(0)}k`, '']}
+                <YAxis tickFormatter={(value) => `₲${value}k`} />
+                <Tooltip
+                  formatter={(value: number) => [`₲${value.toFixed(0)}k`, '']}
                   labelFormatter={(label) => `Día: ${label}`}
                 />
                 <Line 
@@ -243,7 +243,7 @@ const Dashboard: React.FC = () => {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number) => [`$${value.toLocaleString()}`, '']} />
+                  <Tooltip formatter={(value: number) => [`₲${value.toLocaleString('es-PY')}`, '']} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
@@ -332,12 +332,12 @@ const Dashboard: React.FC = () => {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Ingresos:</span>
-                      <span className="font-medium text-green-600">${todayReport.revenue.toLocaleString()}</span>
+                      <span className="font-medium text-green-600">₲{todayReport.revenue.toLocaleString('es-PY')}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Utilidad:</span>
                       <span className={`font-medium ${todayReport.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        ${todayReport.profit.toLocaleString()}
+                        ₲{todayReport.profit.toLocaleString('es-PY')}
                       </span>
                     </div>
                   </div>
