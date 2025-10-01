@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Plus, Minus, Edit2, Trash2, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
+import { Package, Plus, Minus, CreditCard as Edit2, Trash2, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
