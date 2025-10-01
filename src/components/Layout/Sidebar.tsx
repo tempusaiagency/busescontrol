@@ -1,13 +1,14 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  BarChart3, 
-  Bus, 
-  Users, 
-  CreditCard, 
-  FileText, 
+import {
+  BarChart3,
+  Bus,
+  Users,
+  CreditCard,
+  FileText,
   X,
-  Home
+  Home,
+  Package
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -22,6 +23,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Buses', href: '/buses', icon: Bus },
     { name: 'Pasajeros', href: '/passengers', icon: Users },
+    { name: 'Inventario', href: '/inventory', icon: Package },
     { name: 'Gastos', href: '/expenses', icon: CreditCard },
     { name: 'Reportes', href: '/reports', icon: FileText },
   ];

@@ -5,6 +5,7 @@ import Header from './components/Layout/Header';
 import Dashboard from './pages/Dashboard';
 import Buses from './pages/Buses';
 import Passengers from './pages/Passengers';
+import Inventory from './pages/Inventory';
 import Expenses from './pages/Expenses';
 import Reports from './pages/Reports';
 import Login from './pages/Login';
@@ -33,6 +34,7 @@ function AppContent() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/buses" element={<Buses />} />
               <Route path="/passengers" element={<Passengers />} />
+              <Route path="/inventory" element={<Inventory />} />
               <Route path="/expenses" element={<Expenses />} />
               <Route path="/reports" element={<Reports />} />
             </Routes>
