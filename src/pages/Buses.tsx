@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
-import { Bus, Plus, Edit2, Trash2, User, MapPin, Users, DollarSign } from 'lucide-react';
+import { Bus, Plus, CreditCard as Edit2, Trash2, User, MapPin, Users, DollarSign } from 'lucide-react';
 import type { Bus as BusType } from '../contexts/DataContext';
 
 const Buses: React.FC = () => {
