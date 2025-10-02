@@ -73,25 +73,32 @@ export const PermissionsProvider: React.FC<{ children: ReactNode }> = ({ childre
         `)
         .eq('user_id', user.id);
 
-      if (assignmentsError) throw assignmentsError;
+      if (assignmentsError) {
+        console.error('Error fetching assignments:', assignmentsError);
+        throw assignmentsError;
+      }
+
+      console.log('User role assignments:', assignments);
 
       if (assignments && assignments.length > 0) {
         const mergedPermissions: Permissions = { ...defaultPermissions };
 
         assignments.forEach((assignment: any) => {
           if (assignment.user_roles && assignment.user_roles.permissions) {
-            const rolePermissions = assignment.user_roles.permissions as Permissions;
+            const rolePermissions = assignment.user_roles.permissions as any;
+            console.log('Role permissions:', rolePermissions);
             Object.keys(rolePermissions).forEach((key) => {
-              const permKey = key as keyof Permissions;
-              if (rolePermissions[permKey]) {
-                mergedPermissions[permKey] = true;
+              if (rolePermissions[key] === true) {
+                mergedPermissions[key as keyof Permissions] = true;
               }
             });
           }
         });
 
+        console.log('Final merged permissions:', mergedPermissions);
         setPermissions(mergedPermissions);
       } else {
+        console.log('No role assignments found, using defaults');
         setPermissions({
           dashboard: true,
           buses: true,

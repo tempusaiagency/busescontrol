@@ -22,7 +22,10 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
   const location = useLocation();
-  const { permissions, hasPermission } = usePermissions();
+  const { permissions, hasPermission, loading } = usePermissions();
+
+  console.log('Sidebar permissions:', permissions);
+  console.log('Sidebar loading:', loading);
 
   const allNavigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home, permission: 'dashboard' as const },
@@ -36,7 +39,13 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     { name: 'Configuración', href: '/configuration', icon: Settings, permission: 'configuration' as const },
   ];
 
-  const navigation = allNavigation.filter(item => hasPermission(item.permission));
+  const navigation = allNavigation.filter(item => {
+    const hasPerm = hasPermission(item.permission);
+    console.log(`Permission ${item.permission}: ${hasPerm}`);
+    return hasPerm;
+  });
+
+  console.log('Filtered navigation items:', navigation.length);
 
   const isActive = (href: string) => location.pathname === href;
 
