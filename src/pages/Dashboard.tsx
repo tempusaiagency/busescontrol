@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, DollarSign, AlertCircle } from 'lucide-react';
+import { BarChart3, TrendingUp, DollarSign, AlertCircle, Calendar } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ReportSelector, ReportCategory } from '../components/Dashboard/ReportSelector';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { formatGuarani } from '../utils/currency';
+import { format, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 
 interface DashboardStats {
   totalTrips: number;
@@ -16,6 +17,8 @@ interface DashboardStats {
   incidentsCost: number;
   avgOccupancy: number;
 }
+
+type DateFilterType = 'custom' | 'month' | 'year' | 'all';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -32,20 +35,80 @@ const Dashboard: React.FC = () => {
   });
   const [loading, setLoading] = useState(true);
 
+  const [dateFilterType, setDateFilterType] = useState<DateFilterType>('month');
+  const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
+  const [selectedYear, setSelectedYear] = useState(format(new Date(), 'yyyy'));
+
   useEffect(() => {
     if (user) {
       loadDashboardData();
     }
-  }, [user]);
+  }, [user, startDate, endDate]);
+
+  const handleDateFilterChange = (type: DateFilterType) => {
+    setDateFilterType(type);
+    const now = new Date();
+
+    switch (type) {
+      case 'month':
+        const monthDate = selectedMonth ? new Date(selectedMonth + '-01') : now;
+        setStartDate(format(startOfMonth(monthDate), 'yyyy-MM-dd'));
+        setEndDate(format(endOfMonth(monthDate), 'yyyy-MM-dd'));
+        break;
+      case 'year':
+        const yearDate = selectedYear ? new Date(selectedYear + '-01-01') : now;
+        setStartDate(format(startOfYear(yearDate), 'yyyy-MM-dd'));
+        setEndDate(format(endOfYear(yearDate), 'yyyy-MM-dd'));
+        break;
+      case 'all':
+        setStartDate('2000-01-01');
+        setEndDate(format(new Date(), 'yyyy-MM-dd'));
+        break;
+      case 'custom':
+        break;
+    }
+  };
+
+  const handleMonthChange = (month: string) => {
+    setSelectedMonth(month);
+    const monthDate = new Date(month + '-01');
+    setStartDate(format(startOfMonth(monthDate), 'yyyy-MM-dd'));
+    setEndDate(format(endOfMonth(monthDate), 'yyyy-MM-dd'));
+  };
+
+  const handleYearChange = (year: string) => {
+    setSelectedYear(year);
+    const yearDate = new Date(year + '-01-01');
+    setStartDate(format(startOfYear(yearDate), 'yyyy-MM-dd'));
+    setEndDate(format(endOfYear(yearDate), 'yyyy-MM-dd'));
+  };
 
   const loadDashboardData = async () => {
     setLoading(true);
     try {
       const [tripsData, incidentsData, maintenanceData, expensesData] = await Promise.all([
-        supabase.from('trips').select('*'),
-        supabase.from('operational_incidents').select('*'),
-        supabase.from('maintenance_records').select('cost'),
-        supabase.from('expenses').select('*')
+        supabase
+          .from('trips')
+          .select('*')
+          .gte('start_time', startDate)
+          .lte('start_time', endDate + 'T23:59:59'),
+        supabase
+          .from('operational_incidents')
+          .select('*')
+          .gte('reported_at', startDate)
+          .lte('reported_at', endDate + 'T23:59:59'),
+        supabase
+          .from('maintenance_records')
+          .select('cost')
+          .gte('scheduled_date', startDate)
+          .lte('scheduled_date', endDate),
+        supabase
+          .from('expenses')
+          .select('*')
+          .gte('date', startDate)
+          .lte('date', endDate)
       ]);
 
       const trips = tripsData.data || [];
@@ -370,6 +433,115 @@ const Dashboard: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-900">Dashboard Avanzado</h1>
         </div>
         <p className="text-gray-600">Análisis completo del rendimiento operativo</p>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="flex items-center gap-3 mb-4">
+          <Calendar className="h-5 w-5 text-gray-600" />
+          <h3 className="text-lg font-semibold text-gray-900">Filtro de Fecha</h3>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+          <button
+            onClick={() => handleDateFilterChange('month')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              dateFilterType === 'month'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Por Mes
+          </button>
+          <button
+            onClick={() => handleDateFilterChange('year')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              dateFilterType === 'year'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Por Año
+          </button>
+          <button
+            onClick={() => handleDateFilterChange('custom')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              dateFilterType === 'custom'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Rango Personalizado
+          </button>
+          <button
+            onClick={() => handleDateFilterChange('all')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              dateFilterType === 'all'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Todo
+          </button>
+        </div>
+
+        {dateFilterType === 'month' && (
+          <div className="flex items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Seleccionar Mes:</label>
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => handleMonthChange(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+        )}
+
+        {dateFilterType === 'year' && (
+          <div className="flex items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Seleccionar Año:</label>
+            <select
+              value={selectedYear}
+              onChange={(e) => handleYearChange(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              {Array.from({ length: 10 }, (_, i) => {
+                const year = new Date().getFullYear() - i;
+                return (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        )}
+
+        {dateFilterType === 'custom' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-center gap-4">
+              <label className="text-sm font-medium text-gray-700">Desde:</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div className="flex items-center gap-4">
+              <label className="text-sm font-medium text-gray-700">Hasta:</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="mt-4 text-sm text-gray-600">
+          <strong>Período activo:</strong> {format(new Date(startDate), 'dd/MM/yyyy')} - {format(new Date(endDate), 'dd/MM/yyyy')}
+        </div>
       </div>
 
       <ReportSelector selectedCategory={selectedCategory} onSelectCategory={setSelectedCategory} />
