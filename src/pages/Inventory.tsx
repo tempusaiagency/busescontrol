@@ -3,6 +3,17 @@ import { Package, Plus, Minus, CreditCard as Edit2, Trash2, AlertTriangle, Trend
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
+interface CatalogItem {
+  id: string;
+  name: string;
+  category: 'parts' | 'supplies' | 'tools' | 'fuel' | 'other';
+  default_unit: string;
+  default_min_quantity: number;
+  default_max_quantity: number;
+  description: string | null;
+  is_active: boolean;
+}
+
 interface InventoryItem {
   id: string;
   name: string;
@@ -34,12 +45,14 @@ interface InventoryTransaction {
 const Inventory: React.FC = () => {
   const { user } = useAuth();
   const [items, setItems] = useState<InventoryItem[]>([]);
+  const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
   const [transactions, setTransactions] = useState<InventoryTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [useCustomItem, setUseCustomItem] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -67,6 +80,7 @@ const Inventory: React.FC = () => {
     if (user) {
       loadInventory();
       loadTransactions();
+      loadCatalog();
     }
   }, [user]);
 
@@ -83,6 +97,21 @@ const Inventory: React.FC = () => {
       console.error('Error loading inventory:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCatalog = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('item_catalog')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setCatalogItems(data || []);
+    } catch (error) {
+      console.error('Error loading catalog:', error);
     }
   };
 
@@ -212,6 +241,22 @@ const Inventory: React.FC = () => {
       location: '',
       notes: ''
     });
+    setUseCustomItem(false);
+  };
+
+  const handleCatalogItemSelect = (catalogItemId: string) => {
+    const catalogItem = catalogItems.find(item => item.id === catalogItemId);
+    if (catalogItem) {
+      setFormData({
+        ...formData,
+        name: catalogItem.name,
+        category: catalogItem.category,
+        unit: catalogItem.default_unit,
+        min_quantity: catalogItem.default_min_quantity,
+        max_quantity: catalogItem.default_max_quantity,
+        notes: catalogItem.description || ''
+      });
+    }
   };
 
   const resetTransactionForm = () => {
@@ -487,6 +532,48 @@ const Inventory: React.FC = () => {
                 {selectedItem ? 'Editar Artículo' : 'Agregar Artículo'}
               </h2>
               <form onSubmit={handleSubmit} className="space-y-4">
+                {!selectedItem && (
+                  <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={!useCustomItem}
+                        onChange={() => setUseCustomItem(false)}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Seleccionar del catálogo</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={useCustomItem}
+                        onChange={() => setUseCustomItem(true)}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Artículo personalizado</span>
+                    </label>
+                  </div>
+                )}
+
+                {!useCustomItem && !selectedItem && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Seleccionar Artículo del Catálogo
+                    </label>
+                    <select
+                      onChange={(e) => handleCatalogItemSelect(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">-- Seleccione un artículo --</option>
+                      {catalogItems.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name} ({categoryNames[item.category]})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -498,6 +585,7 @@ const Inventory: React.FC = () => {
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
+                      readOnly={!useCustomItem && !selectedItem}
                     />
                   </div>
 

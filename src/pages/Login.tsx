@@ -40,11 +40,8 @@ const Login: React.FC = () => {
             Inicia sesión en tu cuenta
           </p>
           
-          {/* Demo credentials */}
           <div className="mt-4 p-4 bg-blue-800 rounded-lg">
-            <p className="text-xs text-blue-200 mb-2 font-semibold">Credenciales de prueba:</p>
-            <p className="text-xs text-blue-200">Admin: admin@buses.com / admin123</p>
-            <p className="text-xs text-blue-200">Operador: operator@buses.com / operator123</p>
+            <p className="text-xs text-blue-200">Ingresa con tu correo y contraseña</p>
           </div>
         </div>
         

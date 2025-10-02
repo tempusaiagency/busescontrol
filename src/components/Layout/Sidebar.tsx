@@ -8,8 +8,10 @@ import {
   FileText,
   X,
   Home,
-  Package
+  Package,
+  Settings
 } from 'lucide-react';
+import { usePermissions } from '../../contexts/PermissionsContext';
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -18,15 +20,19 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
   const location = useLocation();
+  const { permissions, hasPermission } = usePermissions();
 
-  const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: Home },
-    { name: 'Buses', href: '/buses', icon: Bus },
-    { name: 'Pasajeros', href: '/passengers', icon: Users },
-    { name: 'Inventario', href: '/inventory', icon: Package },
-    { name: 'Gastos', href: '/expenses', icon: CreditCard },
-    { name: 'Reportes', href: '/reports', icon: FileText },
+  const allNavigation = [
+    { name: 'Dashboard', href: '/dashboard', icon: Home, permission: 'dashboard' as const },
+    { name: 'Buses', href: '/buses', icon: Bus, permission: 'buses' as const },
+    { name: 'Pasajeros', href: '/passengers', icon: Users, permission: 'passengers' as const },
+    { name: 'Inventario', href: '/inventory', icon: Package, permission: 'inventory' as const },
+    { name: 'Gastos', href: '/expenses', icon: CreditCard, permission: 'expenses' as const },
+    { name: 'Reportes', href: '/reports', icon: FileText, permission: 'reports' as const },
+    { name: 'Configuración', href: '/configuration', icon: Settings, permission: 'configuration' as const },
   ];
+
+  const navigation = allNavigation.filter(item => hasPermission(item.permission));
 
   const isActive = (href: string) => location.pathname === href;
 

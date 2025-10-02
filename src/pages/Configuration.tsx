@@ -1,0 +1,673 @@
+import React, { useState, useEffect } from 'react';
+import { Settings, Plus, Edit2, Trash2, Users, Package, Save, X } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
+
+interface CatalogItem {
+  id: string;
+  name: string;
+  category: 'parts' | 'supplies' | 'tools' | 'fuel' | 'other';
+  default_unit: string;
+  default_min_quantity: number;
+  default_max_quantity: number;
+  description: string | null;
+  is_active: boolean;
+}
+
+interface UserRole {
+  id: string;
+  name: string;
+  description: string | null;
+  permissions: {
+    dashboard: boolean;
+    buses: boolean;
+    passengers: boolean;
+    inventory: boolean;
+    expenses: boolean;
+    reports: boolean;
+    configuration: boolean;
+  };
+}
+
+interface User {
+  id: string;
+  email: string;
+  created_at: string;
+}
+
+interface RoleAssignment {
+  id: string;
+  user_id: string;
+  role_id: string;
+  assigned_at: string;
+  user?: User;
+  role?: UserRole;
+}
+
+const Configuration: React.FC = () => {
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<'catalog' | 'users'>('catalog');
+  const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
+  const [roles, setRoles] = useState<UserRole[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [roleAssignments, setRoleAssignments] = useState<RoleAssignment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCatalogModal, setShowCatalogModal] = useState(false);
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [selectedCatalogItem, setSelectedCatalogItem] = useState<CatalogItem | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+  const [catalogFormData, setCatalogFormData] = useState({
+    name: '',
+    category: 'parts' as CatalogItem['category'],
+    default_unit: 'pieces',
+    default_min_quantity: 10,
+    default_max_quantity: 1000,
+    description: '',
+    is_active: true
+  });
+
+  const [selectedRoleId, setSelectedRoleId] = useState('');
+
+  const categoryNames = {
+    parts: 'Repuestos',
+    supplies: 'Suministros',
+    tools: 'Herramientas',
+    fuel: 'Combustible',
+    other: 'Otros'
+  };
+
+  useEffect(() => {
+    if (user) {
+      loadData();
+    }
+  }, [user]);
+
+  const loadData = async () => {
+    setLoading(true);
+    await Promise.all([
+      loadCatalogItems(),
+      loadRoles(),
+      loadUsers(),
+      loadRoleAssignments()
+    ]);
+    setLoading(false);
+  };
+
+  const loadCatalogItems = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('item_catalog')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      setCatalogItems(data || []);
+    } catch (error) {
+      console.error('Error loading catalog:', error);
+    }
+  };
+
+  const loadRoles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      setRoles(data || []);
+    } catch (error) {
+      console.error('Error loading roles:', error);
+    }
+  };
+
+  const loadUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_role_assignments')
+        .select('user_id')
+        .limit(1000);
+
+      if (error) throw error;
+
+      const userIds = [...new Set(data?.map(a => a.user_id) || [])];
+      if (userIds.length > 0) {
+        const userList: User[] = [];
+        for (const userId of userIds) {
+          const { data: { user: userData }, error: userError } = await supabase.auth.admin.getUserById(userId);
+          if (!userError && userData) {
+            userList.push({
+              id: userData.id,
+              email: userData.email || '',
+              created_at: userData.created_at
+            });
+          }
+        }
+        setUsers(userList);
+      }
+    } catch (error) {
+      console.error('Error loading users:', error);
+    }
+  };
+
+  const loadRoleAssignments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_role_assignments')
+        .select('*')
+        .order('assigned_at', { ascending: false });
+
+      if (error) throw error;
+      setRoleAssignments(data || []);
+    } catch (error) {
+      console.error('Error loading role assignments:', error);
+    }
+  };
+
+  const handleCatalogSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    try {
+      if (selectedCatalogItem) {
+        const { error } = await supabase
+          .from('item_catalog')
+          .update({
+            ...catalogFormData,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', selectedCatalogItem.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('item_catalog')
+          .insert([catalogFormData]);
+
+        if (error) throw error;
+      }
+
+      setShowCatalogModal(false);
+      setSelectedCatalogItem(null);
+      resetCatalogForm();
+      loadCatalogItems();
+    } catch (error) {
+      console.error('Error saving catalog item:', error);
+      alert('Error al guardar el artículo del catálogo');
+    }
+  };
+
+  const handleDeleteCatalogItem = async (id: string) => {
+    if (!confirm('¿Está seguro de eliminar este artículo del catálogo?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('item_catalog')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      loadCatalogItems();
+    } catch (error) {
+      console.error('Error deleting catalog item:', error);
+      alert('Error al eliminar el artículo');
+    }
+  };
+
+  const handleAssignRole = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !selectedUser || !selectedRoleId) return;
+
+    try {
+      const { error } = await supabase
+        .from('user_role_assignments')
+        .insert([{
+          user_id: selectedUser.id,
+          role_id: selectedRoleId,
+          assigned_by: user.id
+        }]);
+
+      if (error) throw error;
+
+      setShowUserModal(false);
+      setSelectedUser(null);
+      setSelectedRoleId('');
+      loadRoleAssignments();
+    } catch (error) {
+      console.error('Error assigning role:', error);
+      alert('Error al asignar el rol');
+    }
+  };
+
+  const handleRemoveRoleAssignment = async (assignmentId: string) => {
+    if (!confirm('¿Está seguro de remover esta asignación de rol?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('user_role_assignments')
+        .delete()
+        .eq('id', assignmentId);
+
+      if (error) throw error;
+      loadRoleAssignments();
+    } catch (error) {
+      console.error('Error removing role assignment:', error);
+      alert('Error al remover la asignación');
+    }
+  };
+
+  const resetCatalogForm = () => {
+    setCatalogFormData({
+      name: '',
+      category: 'parts',
+      default_unit: 'pieces',
+      default_min_quantity: 10,
+      default_max_quantity: 1000,
+      description: '',
+      is_active: true
+    });
+  };
+
+  const openEditCatalogModal = (item: CatalogItem) => {
+    setSelectedCatalogItem(item);
+    setCatalogFormData({
+      name: item.name,
+      category: item.category,
+      default_unit: item.default_unit,
+      default_min_quantity: item.default_min_quantity,
+      default_max_quantity: item.default_max_quantity,
+      description: item.description || '',
+      is_active: item.is_active
+    });
+    setShowCatalogModal(true);
+  };
+
+  const getUserRoles = (userId: string) => {
+    return roleAssignments
+      .filter(assignment => assignment.user_id === userId)
+      .map(assignment => roles.find(role => role.id === assignment.role_id))
+      .filter(role => role !== undefined) as UserRole[];
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-xl text-gray-600">Cargando configuración...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-gray-900">Configuración</h1>
+      </div>
+
+      <div className="bg-white rounded-lg shadow">
+        <div className="border-b border-gray-200">
+          <nav className="flex -mb-px">
+            <button
+              onClick={() => setActiveTab('catalog')}
+              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'catalog'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Catálogo de Artículos
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'users'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Gestión de Usuarios
+              </div>
+            </button>
+          </nav>
+        </div>
+
+        <div className="p-6">
+          {activeTab === 'catalog' && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-900">Artículos del Catálogo</h2>
+                <button
+                  onClick={() => {
+                    setSelectedCatalogItem(null);
+                    resetCatalogForm();
+                    setShowCatalogModal(true);
+                  }}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                >
+                  <Plus className="h-5 w-5" />
+                  Agregar Artículo
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Nombre
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Categoría
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Unidad
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Cantidad Mín/Máx
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Estado
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Acciones
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {catalogItems.map((item) => (
+                      <tr key={item.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                          {item.description && (
+                            <div className="text-xs text-gray-500">{item.description}</div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                            {categoryNames[item.category]}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.default_unit}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {item.default_min_quantity} / {item.default_max_quantity}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            item.is_active
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {item.is_active ? 'Activo' : 'Inactivo'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => openEditCatalogModal(item)}
+                              className="text-blue-600 hover:text-blue-900"
+                              title="Editar"
+                            >
+                              <Edit2 className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCatalogItem(item.id)}
+                              className="text-red-600 hover:text-red-900"
+                              title="Eliminar"
+                            >
+                              <Trash2 className="h-5 w-5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'users' && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-900">Roles Disponibles</h2>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {roles.map((role) => (
+                  <div key={role.id} className="border border-gray-200 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{role.name}</h3>
+                    {role.description && (
+                      <p className="text-sm text-gray-600 mb-3">{role.description}</p>
+                    )}
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-gray-500 uppercase">Permisos:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(role.permissions).map(([module, allowed]) => (
+                          allowed && (
+                            <span
+                              key={module}
+                              className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded"
+                            >
+                              {module}
+                            </span>
+                          )
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t pt-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">Asignaciones de Roles</h2>
+
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Usuario
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Roles
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Fecha de Asignación
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Acciones
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {users.map((usr) => {
+                        const userRoles = getUserRoles(usr.id);
+                        const userAssignments = roleAssignments.filter(a => a.user_id === usr.id);
+
+                        return (
+                          <tr key={usr.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">{usr.email}</div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex flex-wrap gap-2">
+                                {userRoles.map((role) => (
+                                  <span
+                                    key={role.id}
+                                    className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded"
+                                  >
+                                    {role.name}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {userAssignments[0] && new Date(userAssignments[0].assigned_at).toLocaleDateString()}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                              <div className="flex justify-end gap-2">
+                                {userAssignments.map((assignment) => (
+                                  <button
+                                    key={assignment.id}
+                                    onClick={() => handleRemoveRoleAssignment(assignment.id)}
+                                    className="text-red-600 hover:text-red-900"
+                                    title="Remover rol"
+                                  >
+                                    <X className="h-5 w-5" />
+                                  </button>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {showCatalogModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full">
+            <div className="p-6">
+              <h2 className="text-2xl font-bold mb-4">
+                {selectedCatalogItem ? 'Editar Artículo' : 'Agregar Artículo al Catálogo'}
+              </h2>
+              <form onSubmit={handleCatalogSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nombre
+                    </label>
+                    <input
+                      type="text"
+                      value={catalogFormData.name}
+                      onChange={(e) => setCatalogFormData({ ...catalogFormData, name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Categoría
+                    </label>
+                    <select
+                      value={catalogFormData.category}
+                      onChange={(e) => setCatalogFormData({ ...catalogFormData, category: e.target.value as CatalogItem['category'] })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    >
+                      {Object.entries(categoryNames).map(([key, label]) => (
+                        <option key={key} value={key}>{label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Unidad por Defecto
+                    </label>
+                    <input
+                      type="text"
+                      value={catalogFormData.default_unit}
+                      onChange={(e) => setCatalogFormData({ ...catalogFormData, default_unit: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Cantidad Mínima por Defecto
+                    </label>
+                    <input
+                      type="number"
+                      value={catalogFormData.default_min_quantity}
+                      onChange={(e) => setCatalogFormData({ ...catalogFormData, default_min_quantity: parseInt(e.target.value) || 0 })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                      min="0"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Cantidad Máxima por Defecto
+                    </label>
+                    <input
+                      type="number"
+                      value={catalogFormData.default_max_quantity}
+                      onChange={(e) => setCatalogFormData({ ...catalogFormData, default_max_quantity: parseInt(e.target.value) || 0 })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                      min="0"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="flex items-center gap-2 mt-8">
+                      <input
+                        type="checkbox"
+                        checked={catalogFormData.is_active}
+                        onChange={(e) => setCatalogFormData({ ...catalogFormData, is_active: e.target.checked })}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Activo</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Descripción
+                  </label>
+                  <textarea
+                    value={catalogFormData.description}
+                    onChange={(e) => setCatalogFormData({ ...catalogFormData, description: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex gap-3 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCatalogModal(false);
+                      setSelectedCatalogItem(null);
+                      resetCatalogForm();
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                  >
+                    <Save className="h-4 w-4" />
+                    {selectedCatalogItem ? 'Actualizar' : 'Agregar'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Configuration;

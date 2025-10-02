@@ -8,9 +8,11 @@ import Passengers from './pages/Passengers';
 import Inventory from './pages/Inventory';
 import Expenses from './pages/Expenses';
 import Reports from './pages/Reports';
+import Configuration from './pages/Configuration';
 import Login from './pages/Login';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
+import { PermissionsProvider } from './contexts/PermissionsContext';
 
 function AppContent() {
   const { isAuthenticated } = useAuth();
@@ -37,6 +39,7 @@ function AppContent() {
               <Route path="/inventory" element={<Inventory />} />
               <Route path="/expenses" element={<Expenses />} />
               <Route path="/reports" element={<Reports />} />
+              <Route path="/configuration" element={<Configuration />} />
             </Routes>
           </div>
         </main>
@@ -48,11 +51,13 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <DataProvider>
-        <Router>
-          <AppContent />
-        </Router>
-      </DataProvider>
+      <PermissionsProvider>
+        <DataProvider>
+          <Router>
+            <AppContent />
+          </Router>
+        </DataProvider>
+      </PermissionsProvider>
     </AuthProvider>
   );
 }
