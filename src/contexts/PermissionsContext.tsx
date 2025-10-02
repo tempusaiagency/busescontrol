@@ -48,12 +48,17 @@ export const PermissionsProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
-      loadPermissions();
-    } else {
-      setPermissions(defaultPermissions);
-      setLoading(false);
-    }
+    const loadUserPermissions = async () => {
+      if (user) {
+        setLoading(true);
+        await loadPermissions();
+      } else {
+        setPermissions(defaultPermissions);
+        setLoading(false);
+      }
+    };
+
+    loadUserPermissions();
   }, [user]);
 
   const loadPermissions = async () => {

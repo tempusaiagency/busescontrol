@@ -59,6 +59,8 @@ const Login: React.FC = () => {
         const success = await login(email, password);
         if (!success) {
           setError('Credenciales incorrectas. Inténtalo de nuevo.');
+        } else {
+          window.location.reload();
         }
       }
     } catch (err: any) {
