@@ -144,12 +144,23 @@ const Configuration: React.FC = () => {
 
   const loadUsers = async () => {
     try {
-      const { data: { users: allUsers }, error } = await supabase.auth.admin.listUsers();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
 
-      if (error) throw error;
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/list-users`;
+      const response = await fetch(apiUrl, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) throw new Error('Error loading users');
+
+      const { users: allUsers } = await response.json();
 
       if (allUsers) {
-        const userList: User[] = allUsers.map(u => ({
+        const userList: User[] = allUsers.map((u: any) => ({
           id: u.id,
           email: u.email || '',
           created_at: u.created_at
@@ -315,6 +326,32 @@ const Configuration: React.FC = () => {
     } catch (error) {
       console.error('Error removing role assignment:', error);
       alert('Error al remover la asignación');
+    }
+  };
+
+  const handleDeleteRole = async (roleId: string) => {
+    if (!confirm('¿Está seguro de eliminar este rol? Esto eliminará todas las asignaciones asociadas.')) return;
+
+    try {
+      const { error: assignmentsError } = await supabase
+        .from('user_role_assignments')
+        .delete()
+        .eq('role_id', roleId);
+
+      if (assignmentsError) throw assignmentsError;
+
+      const { error } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('id', roleId);
+
+      if (error) throw error;
+
+      await loadData();
+      alert('Rol eliminado exitosamente');
+    } catch (error: any) {
+      console.error('Error deleting role:', error);
+      alert('Error al eliminar el rol: ' + error.message);
     }
   };
 
@@ -616,21 +653,30 @@ const Configuration: React.FC = () => {
                   <div key={role.id} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex justify-between items-start mb-2">
                       <h3 className="text-lg font-semibold text-gray-900">{role.name}</h3>
-                      <button
-                        onClick={() => {
-                          setSelectedRole(role);
-                          setRoleFormData({
-                            name: role.name,
-                            description: role.description || '',
-                            permissions: role.permissions
-                          });
-                          setShowRoleModal(true);
-                        }}
-                        className="text-blue-600 hover:text-blue-900"
-                        title="Editar rol"
-                      >
-                        <Edit2 className="h-5 w-5" />
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedRole(role);
+                            setRoleFormData({
+                              name: role.name,
+                              description: role.description || '',
+                              permissions: role.permissions
+                            });
+                            setShowRoleModal(true);
+                          }}
+                          className="text-blue-600 hover:text-blue-900"
+                          title="Editar rol"
+                        >
+                          <Edit2 className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteRole(role.id)}
+                          className="text-red-600 hover:text-red-900"
+                          title="Eliminar rol"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </button>
+                      </div>
                     </div>
                     {role.description && (
                       <p className="text-sm text-gray-600 mb-3">{role.description}</p>
