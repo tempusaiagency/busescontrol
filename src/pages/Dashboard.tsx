@@ -540,7 +540,7 @@ const Dashboard: React.FC = () => {
         )}
 
         <div className="mt-4 text-sm text-gray-600">
-          <strong>Período activo:</strong> {format(new Date(startDate), 'dd/MM/yyyy')} - {format(new Date(endDate), \'dd/MM/yyyy')}
+          <strong>Período activo:</strong> {format(new Date(startDate), "dd/MM/yyyy")} - {format(new Date(endDate), "dd/MM/yyyy")}
         </div>
       </div>
 
