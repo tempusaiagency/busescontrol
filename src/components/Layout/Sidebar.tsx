@@ -9,7 +9,9 @@ import {
   X,
   Home,
   Package,
-  Settings
+  Settings,
+  MapPin,
+  UserCog
 } from 'lucide-react';
 import { usePermissions } from '../../contexts/PermissionsContext';
 
@@ -26,9 +28,11 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     { name: 'Dashboard', href: '/dashboard', icon: Home, permission: 'dashboard' as const },
     { name: 'Buses', href: '/buses', icon: Bus, permission: 'buses' as const },
     { name: 'Pasajeros', href: '/passengers', icon: Users, permission: 'passengers' as const },
+    { name: 'Rastreo en Vivo', href: '/tracking', icon: MapPin, permission: 'tracking' as const },
     { name: 'Inventario', href: '/inventory', icon: Package, permission: 'inventory' as const },
     { name: 'Gastos', href: '/expenses', icon: CreditCard, permission: 'expenses' as const },
     { name: 'Reportes', href: '/reports', icon: FileText, permission: 'reports' as const },
+    { name: 'Recursos Humanos', href: '/hr', icon: UserCog, permission: 'hr' as const },
     { name: 'Configuración', href: '/configuration', icon: Settings, permission: 'configuration' as const },
   ];
 

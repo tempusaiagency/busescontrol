@@ -1,18 +1,21 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { format, startOfDay, isToday } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { 
-  Users, 
-  DollarSign, 
-  CreditCard, 
-  TrendingUp, 
+import {
+  Users,
+  DollarSign,
+  CreditCard,
+  TrendingUp,
   Bus,
-  Activity
+  Activity,
+  MapPin
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const { buses, passengerCounts, expenses, getDailyReport } = useData();
   const today = format(new Date(), 'yyyy-MM-dd');
 
@@ -86,11 +89,20 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-2 text-gray-600">
-          Resumen general de la operación de buses - {format(new Date(), 'dd/MM/yyyy')}
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="mt-2 text-gray-600">
+            Resumen general de la operación de buses - {format(new Date(), 'dd/MM/yyyy')}
+          </p>
+        </div>
+        <button
+          onClick={() => navigate('/tracking')}
+          className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 shadow-lg"
+        >
+          <MapPin className="h-5 w-5" />
+          Ver Buses en Tiempo Real
+        </button>
       </div>
 
       {/* KPI Cards */}

@@ -27,6 +27,31 @@ const Login: React.FC = () => {
 
         if (signUpError) throw signUpError;
 
+        if (data.user) {
+          const { data: existingUsers } = await supabase
+            .from('user_role_assignments')
+            .select('id')
+            .limit(1);
+
+          if (!existingUsers || existingUsers.length === 0) {
+            const { data: adminRole } = await supabase
+              .from('user_roles')
+              .select('id')
+              .eq('name', 'admin')
+              .single();
+
+            if (adminRole) {
+              await supabase
+                .from('user_role_assignments')
+                .insert([{
+                  user_id: data.user.id,
+                  role_id: adminRole.id,
+                  assigned_by: data.user.id
+                }]);
+            }
+          }
+        }
+
         setSuccess('Cuenta creada exitosamente. Ahora puedes iniciar sesión.');
         setIsSignUp(false);
         setPassword('');

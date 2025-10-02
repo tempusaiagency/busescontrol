@@ -10,6 +10,8 @@ interface Permissions {
   expenses: boolean;
   reports: boolean;
   configuration: boolean;
+  tracking: boolean;
+  hr: boolean;
 }
 
 interface PermissionsContextType {
@@ -25,7 +27,9 @@ const defaultPermissions: Permissions = {
   inventory: false,
   expenses: false,
   reports: false,
-  configuration: false
+  configuration: false,
+  tracking: false,
+  hr: false
 };
 
 const PermissionsContext = createContext<PermissionsContextType | undefined>(undefined);
@@ -95,7 +99,9 @@ export const PermissionsProvider: React.FC<{ children: ReactNode }> = ({ childre
           inventory: true,
           expenses: true,
           reports: true,
-          configuration: false
+          configuration: false,
+          tracking: true,
+          hr: false
         });
       }
     } catch (error) {
@@ -107,7 +113,9 @@ export const PermissionsProvider: React.FC<{ children: ReactNode }> = ({ childre
         inventory: true,
         expenses: true,
         reports: true,
-        configuration: false
+        configuration: false,
+        tracking: true,
+        hr: false
       });
     } finally {
       setLoading(false);
