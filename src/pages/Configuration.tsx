@@ -144,26 +144,16 @@ const Configuration: React.FC = () => {
 
   const loadUsers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('user_role_assignments')
-        .select('user_id')
-        .limit(1000);
+      const { data: { users: allUsers }, error } = await supabase.auth.admin.listUsers();
 
       if (error) throw error;
 
-      const userIds = [...new Set(data?.map(a => a.user_id) || [])];
-      if (userIds.length > 0) {
-        const userList: User[] = [];
-        for (const userId of userIds) {
-          const { data: { user: userData }, error: userError } = await supabase.auth.admin.getUserById(userId);
-          if (!userError && userData) {
-            userList.push({
-              id: userData.id,
-              email: userData.email || '',
-              created_at: userData.created_at
-            });
-          }
-        }
+      if (allUsers) {
+        const userList: User[] = allUsers.map(u => ({
+          id: u.id,
+          email: u.email || '',
+          created_at: u.created_at
+        }));
         setUsers(userList);
       }
     } catch (error) {
