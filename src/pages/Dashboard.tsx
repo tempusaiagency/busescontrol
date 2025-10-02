@@ -22,22 +22,25 @@ const Dashboard: React.FC = () => {
 
   const handleDateFilterChange = (type: DateFilterType) => {
     setDateFilterType(type);
-    const now = new Date(2025, 8, 1);
 
     switch (type) {
       case 'month':
-        const monthDate = selectedMonth ? new Date(selectedMonth + '-01') : now;
-        setStartDate(format(startOfMonth(monthDate), 'yyyy-MM-dd'));
-        setEndDate(format(endOfMonth(monthDate), 'yyyy-MM-dd'));
+        if (selectedMonth) {
+          const [year, month] = selectedMonth.split('-');
+          const daysInMonth = new Date(parseInt(year), parseInt(month), 0).getDate();
+          setStartDate(`${year}-${month}-01`);
+          setEndDate(`${year}-${month}-${daysInMonth.toString().padStart(2, '0')}`);
+        }
         break;
       case 'year':
-        const yearDate = selectedYear ? new Date(selectedYear + '-01-01') : now;
-        setStartDate(format(startOfYear(yearDate), 'yyyy-MM-dd'));
-        setEndDate(format(endOfYear(yearDate), 'yyyy-MM-dd'));
+        if (selectedYear) {
+          setStartDate(`${selectedYear}-01-01`);
+          setEndDate(`${selectedYear}-12-31`);
+        }
         break;
       case 'all':
         setStartDate('2020-01-01');
-        setEndDate(format(new Date(), 'yyyy-MM-dd'));
+        setEndDate('2025-12-31');
         break;
       case 'custom':
         break;
@@ -46,16 +49,16 @@ const Dashboard: React.FC = () => {
 
   const handleMonthChange = (month: string) => {
     setSelectedMonth(month);
-    const monthDate = new Date(month + '-01');
-    setStartDate(format(startOfMonth(monthDate), 'yyyy-MM-dd'));
-    setEndDate(format(endOfMonth(monthDate), 'yyyy-MM-dd'));
+    const [year, monthNum] = month.split('-');
+    const daysInMonth = new Date(parseInt(year), parseInt(monthNum), 0).getDate();
+    setStartDate(`${year}-${monthNum}-01`);
+    setEndDate(`${year}-${monthNum}-${daysInMonth.toString().padStart(2, '0')}`);
   };
 
   const handleYearChange = (year: string) => {
     setSelectedYear(year);
-    const yearDate = new Date(year + '-01-01');
-    setStartDate(format(startOfYear(yearDate), 'yyyy-MM-dd'));
-    setEndDate(format(endOfYear(yearDate), 'yyyy-MM-dd'));
+    setStartDate(`${year}-01-01`);
+    setEndDate(`${year}-12-31`);
   };
 
   const renderOperationsReport = () => (
