@@ -53,7 +53,14 @@ export const DateFilter: React.FC<DateFilterProps> = ({
           <div className="flex flex-col items-center">
             <span className="text-sm">Por Mes</span>
             {dateFilterType === 'month' && (
-              <span className="text-xs opacity-90 mt-1">{format(new Date(selectedMonth + '-01'), 'MMMM yyyy')}</span>
+              <span className="text-xs opacity-90 mt-1 capitalize">
+                {(() => {
+                  const [year, month] = selectedMonth.split('-');
+                  const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                                      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+                  return `${monthNames[parseInt(month) - 1]} ${year}`;
+                })()}
+              </span>
             )}
           </div>
         </button>
