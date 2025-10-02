@@ -55,6 +55,8 @@ const Configuration: React.FC = () => {
   const [showCatalogModal, setShowCatalogModal] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
   const [showRoleModal, setShowRoleModal] = useState(false);
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
+  const [showDeleteUserModal, setShowDeleteUserModal] = useState(false);
   const [selectedCatalogItem, setSelectedCatalogItem] = useState<CatalogItem | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
@@ -70,6 +72,9 @@ const Configuration: React.FC = () => {
   });
 
   const [assignRoleId, setAssignRoleId] = useState('');
+  const [editUserRoleId, setEditUserRoleId] = useState('');
+  const [editUserEmail, setEditUserEmail] = useState('');
+  const [editUserPassword, setEditUserPassword] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
 
@@ -329,6 +334,104 @@ const Configuration: React.FC = () => {
     } catch (error) {
       console.error('Error removing role assignment:', error);
       alert('Error al remover la asignación');
+    }
+  };
+
+  const handleEditUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !selectedUser) return;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const updateData: any = { method: 'update', userId: selectedUser.id };
+      if (editUserEmail && editUserEmail !== selectedUser.email) {
+        updateData.email = editUserEmail;
+      }
+      if (editUserPassword) {
+        updateData.password = editUserPassword;
+      }
+
+      if (updateData.email || updateData.password) {
+        const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-user`;
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updateData),
+        });
+
+        if (!response.ok) throw new Error('Error updating user');
+      }
+
+      if (editUserRoleId) {
+        const existingAssignments = roleAssignments.filter(a => a.user_id === selectedUser.id);
+
+        for (const assignment of existingAssignments) {
+          const { error } = await supabase
+            .from('user_role_assignments')
+            .delete()
+            .eq('id', assignment.id);
+
+          if (error) throw error;
+        }
+
+        const { error: insertError } = await supabase
+          .from('user_role_assignments')
+          .insert([{
+            user_id: selectedUser.id,
+            role_id: editUserRoleId,
+            assigned_by: user.id
+          }]);
+
+        if (insertError) throw insertError;
+      }
+
+      setShowEditUserModal(false);
+      setSelectedUser(null);
+      setEditUserRoleId('');
+      setEditUserEmail('');
+      setEditUserPassword('');
+      await loadData();
+      alert('Usuario actualizado exitosamente');
+    } catch (error: any) {
+      console.error('Error updating user:', error);
+      alert('Error al actualizar el usuario: ' + error.message);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-user`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          method: 'delete',
+          userId: selectedUser.id,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Error deleting user');
+
+      setShowDeleteUserModal(false);
+      setSelectedUser(null);
+      await loadData();
+      alert('Usuario eliminado exitosamente');
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
+      alert('Error al eliminar el usuario: ' + error.message);
     }
   };
 
@@ -617,16 +720,29 @@ const Configuration: React.FC = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div className="flex justify-end gap-2">
-                              {userAssignments.map((assignment) => (
-                                <button
-                                  key={assignment.id}
-                                  onClick={() => handleRemoveRoleAssignment(assignment.id)}
-                                  className="text-red-600 hover:text-red-900"
-                                  title="Remover rol"
-                                >
-                                  <X className="h-5 w-5" />
-                                </button>
-                              ))}
+                              <button
+                                onClick={() => {
+                                  setSelectedUser(usr);
+                                  setEditUserEmail(usr.email);
+                                  setEditUserPassword('');
+                                  setEditUserRoleId(userRoles[0]?.id || '');
+                                  setShowEditUserModal(true);
+                                }}
+                                className="text-blue-600 hover:text-blue-900"
+                                title="Editar usuario"
+                              >
+                                <Edit2 className="h-5 w-5" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedUser(usr);
+                                  setShowDeleteUserModal(true);
+                                }}
+                                className="text-red-600 hover:text-red-900"
+                                title="Eliminar usuario"
+                              >
+                                <Trash2 className="h-5 w-5" />
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -913,6 +1029,116 @@ const Configuration: React.FC = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEditUserModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <h2 className="text-2xl font-bold mb-4">Editar Usuario</h2>
+              <form onSubmit={handleEditUser} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Correo Electrónico
+                  </label>
+                  <input
+                    type="email"
+                    value={editUserEmail}
+                    onChange={(e) => setEditUserEmail(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nueva Contraseña (dejar vacío para no cambiar)
+                  </label>
+                  <input
+                    type="password"
+                    value={editUserPassword}
+                    onChange={(e) => setEditUserPassword(e.target.value)}
+                    placeholder="Nueva contraseña"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Rol
+                  </label>
+                  <select
+                    value={editUserRoleId}
+                    onChange={(e) => setEditUserRoleId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Seleccionar rol...</option>
+                    {roles.map((role) => (
+                      <option key={role.id} value={role.id}>
+                        {role.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex gap-3 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEditUserModal(false);
+                      setSelectedUser(null);
+                      setEditUserRoleId('');
+                      setEditUserEmail('');
+                      setEditUserPassword('');
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                  >
+                    <Save className="h-4 w-4" />
+                    Actualizar Usuario
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteUserModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <h2 className="text-2xl font-bold mb-4 text-red-600">Eliminar Usuario</h2>
+              <p className="text-gray-700 mb-6">
+                ¿Está seguro de eliminar el usuario <strong>{selectedUser?.email}</strong>?
+                Esta acción no se puede deshacer y eliminará todas las asignaciones de roles asociadas.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDeleteUserModal(false);
+                    setSelectedUser(null);
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDeleteUser}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Eliminar Usuario
+                </button>
+              </div>
             </div>
           </div>
         </div>
