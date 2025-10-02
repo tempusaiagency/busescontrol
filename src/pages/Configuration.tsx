@@ -54,8 +54,10 @@ const Configuration: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showCatalogModal, setShowCatalogModal] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
   const [selectedCatalogItem, setSelectedCatalogItem] = useState<CatalogItem | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
 
   const [catalogFormData, setCatalogFormData] = useState({
     name: '',
@@ -67,7 +69,25 @@ const Configuration: React.FC = () => {
     is_active: true
   });
 
-  const [selectedRoleId, setSelectedRoleId] = useState('');
+  const [assignRoleId, setAssignRoleId] = useState('');
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
+
+  const [roleFormData, setRoleFormData] = useState({
+    name: '',
+    description: '',
+    permissions: {
+      dashboard: true,
+      buses: true,
+      passengers: true,
+      inventory: true,
+      expenses: true,
+      reports: true,
+      configuration: false,
+      tracking: true,
+      hr: false
+    }
+  });
 
   const categoryNames = {
     parts: 'Repuestos',
@@ -215,28 +235,79 @@ const Configuration: React.FC = () => {
     }
   };
 
-  const handleAssignRole = async (e: React.FormEvent) => {
+  const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !selectedUser || !selectedRoleId) return;
+    if (!user || !newUserEmail || !newUserPassword) return;
 
     try {
-      const { error } = await supabase
-        .from('user_role_assignments')
-        .insert([{
-          user_id: selectedUser.id,
-          role_id: selectedRoleId,
-          assigned_by: user.id
-        }]);
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: newUserEmail,
+        password: newUserPassword
+      });
 
-      if (error) throw error;
+      if (signUpError) throw signUpError;
+
+      if (signUpData.user && assignRoleId) {
+        const { error: assignError } = await supabase
+          .from('user_role_assignments')
+          .insert([{
+            user_id: signUpData.user.id,
+            role_id: assignRoleId,
+            assigned_by: user.id
+          }]);
+
+        if (assignError) throw assignError;
+      }
 
       setShowUserModal(false);
-      setSelectedUser(null);
-      setSelectedRoleId('');
-      loadRoleAssignments();
-    } catch (error) {
-      console.error('Error assigning role:', error);
-      alert('Error al asignar el rol');
+      setNewUserEmail('');
+      setNewUserPassword('');
+      setAssignRoleId('');
+      await loadData();
+      alert('Usuario creado exitosamente');
+    } catch (error: any) {
+      console.error('Error creating user:', error);
+      alert('Error al crear el usuario: ' + error.message);
+    }
+  };
+
+  const handleSaveRole = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    try {
+      if (selectedRole) {
+        const { error } = await supabase
+          .from('user_roles')
+          .update({
+            name: roleFormData.name,
+            description: roleFormData.description,
+            permissions: roleFormData.permissions,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', selectedRole.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('user_roles')
+          .insert([{
+            name: roleFormData.name,
+            description: roleFormData.description,
+            permissions: roleFormData.permissions
+          }]);
+
+        if (error) throw error;
+      }
+
+      setShowRoleModal(false);
+      setSelectedRole(null);
+      resetRoleForm();
+      loadRoles();
+      alert(selectedRole ? 'Rol actualizado exitosamente' : 'Rol creado exitosamente');
+    } catch (error: any) {
+      console.error('Error saving role:', error);
+      alert('Error al guardar el rol: ' + error.message);
     }
   };
 
@@ -266,6 +337,24 @@ const Configuration: React.FC = () => {
       default_max_quantity: 1000,
       description: '',
       is_active: true
+    });
+  };
+
+  const resetRoleForm = () => {
+    setRoleFormData({
+      name: '',
+      description: '',
+      permissions: {
+        dashboard: true,
+        buses: true,
+        passengers: true,
+        inventory: true,
+        expenses: true,
+        reports: true,
+        configuration: false,
+        tracking: true,
+        hr: false
+      }
     });
   };
 
@@ -436,13 +525,123 @@ const Configuration: React.FC = () => {
           {activeTab === 'users' && (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-gray-900">Roles Disponibles</h2>
+                <h2 className="text-xl font-semibold text-gray-900">Usuarios</h2>
+                <button
+                  onClick={() => {
+                    setNewUserEmail('');
+                    setNewUserPassword('');
+                    setAssignRoleId('');
+                    setShowUserModal(true);
+                  }}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                >
+                  <Plus className="h-5 w-5" />
+                  Crear Usuario
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Usuario
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Roles
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Fecha de Creación
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Acciones
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {users.map((usr) => {
+                      const userRoles = getUserRoles(usr.id);
+                      const userAssignments = roleAssignments.filter(a => a.user_id === usr.id);
+
+                      return (
+                        <tr key={usr.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">{usr.email}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-wrap gap-2">
+                              {userRoles.map((role) => (
+                                <span
+                                  key={role.id}
+                                  className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded"
+                                >
+                                  {role.name}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {new Date(usr.created_at).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div className="flex justify-end gap-2">
+                              {userAssignments.map((assignment) => (
+                                <button
+                                  key={assignment.id}
+                                  onClick={() => handleRemoveRoleAssignment(assignment.id)}
+                                  className="text-red-600 hover:text-red-900"
+                                  title="Remover rol"
+                                >
+                                  <X className="h-5 w-5" />
+                                </button>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="border-t pt-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold text-gray-900">Roles Disponibles</h2>
+                  <button
+                    onClick={() => {
+                      setSelectedRole(null);
+                      resetRoleForm();
+                      setShowRoleModal(true);
+                    }}
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                  >
+                    <Plus className="h-5 w-5" />
+                    Crear Rol
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {roles.map((role) => (
                   <div key={role.id} className="border border-gray-200 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{role.name}</h3>
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="text-lg font-semibold text-gray-900">{role.name}</h3>
+                      <button
+                        onClick={() => {
+                          setSelectedRole(role);
+                          setRoleFormData({
+                            name: role.name,
+                            description: role.description || '',
+                            permissions: role.permissions
+                          });
+                          setShowRoleModal(true);
+                        }}
+                        className="text-blue-600 hover:text-blue-900"
+                        title="Editar rol"
+                      >
+                        <Edit2 className="h-5 w-5" />
+                      </button>
+                    </div>
                     {role.description && (
                       <p className="text-sm text-gray-600 mb-3">{role.description}</p>
                     )}
@@ -463,74 +662,6 @@ const Configuration: React.FC = () => {
                     </div>
                   </div>
                 ))}
-              </div>
-
-              <div className="border-t pt-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Asignaciones de Roles</h2>
-
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Usuario
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Roles
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Fecha de Asignación
-                        </th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Acciones
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {users.map((usr) => {
-                        const userRoles = getUserRoles(usr.id);
-                        const userAssignments = roleAssignments.filter(a => a.user_id === usr.id);
-
-                        return (
-                          <tr key={usr.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">{usr.email}</div>
-                            </td>
-                            <td className="px-6 py-4">
-                              <div className="flex flex-wrap gap-2">
-                                {userRoles.map((role) => (
-                                  <span
-                                    key={role.id}
-                                    className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded"
-                                  >
-                                    {role.name}
-                                  </span>
-                                ))}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {userAssignments[0] && new Date(userAssignments[0].assigned_at).toLocaleDateString()}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                              <div className="flex justify-end gap-2">
-                                {userAssignments.map((assignment) => (
-                                  <button
-                                    key={assignment.id}
-                                    onClick={() => handleRemoveRoleAssignment(assignment.id)}
-                                    className="text-red-600 hover:text-red-900"
-                                    title="Remover rol"
-                                  >
-                                    <X className="h-5 w-5" />
-                                  </button>
-                                ))}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
               </div>
             </div>
           )}
@@ -659,6 +790,169 @@ const Configuration: React.FC = () => {
                   >
                     <Save className="h-4 w-4" />
                     {selectedCatalogItem ? 'Actualizar' : 'Agregar'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showUserModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <h2 className="text-2xl font-bold mb-4">Crear Nuevo Usuario</h2>
+              <form onSubmit={handleCreateUser} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Correo Electrónico
+                  </label>
+                  <input
+                    type="email"
+                    value={newUserEmail}
+                    onChange={(e) => setNewUserEmail(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Contraseña
+                  </label>
+                  <input
+                    type="password"
+                    value={newUserPassword}
+                    onChange={(e) => setNewUserPassword(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                    minLength={6}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Asignar Rol
+                  </label>
+                  <select
+                    value={assignRoleId}
+                    onChange={(e) => setAssignRoleId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">Seleccionar rol...</option>
+                    {roles.map((role) => (
+                      <option key={role.id} value={role.id}>
+                        {role.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex gap-3 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowUserModal(false);
+                      setNewUserEmail('');
+                      setNewUserPassword('');
+                      setAssignRoleId('');
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                  >
+                    <Save className="h-4 w-4" />
+                    Crear Usuario
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showRoleModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h2 className="text-2xl font-bold mb-4">
+                {selectedRole ? 'Editar Rol' : 'Crear Nuevo Rol'}
+              </h2>
+              <form onSubmit={handleSaveRole} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nombre del Rol
+                  </label>
+                  <input
+                    type="text"
+                    value={roleFormData.name}
+                    onChange={(e) => setRoleFormData({ ...roleFormData, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Descripción
+                  </label>
+                  <textarea
+                    value={roleFormData.description}
+                    onChange={(e) => setRoleFormData({ ...roleFormData, description: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={3}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Permisos de Módulos
+                  </label>
+                  <div className="space-y-2 bg-gray-50 p-4 rounded-lg">
+                    {Object.entries(roleFormData.permissions).map(([module, allowed]) => (
+                      <label key={module} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={allowed}
+                          onChange={(e) => setRoleFormData({
+                            ...roleFormData,
+                            permissions: {
+                              ...roleFormData.permissions,
+                              [module]: e.target.checked
+                            }
+                          })}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <span className="text-sm font-medium text-gray-700 capitalize">{module}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-3 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowRoleModal(false);
+                      setSelectedRole(null);
+                      resetRoleForm();
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                  >
+                    <Save className="h-4 w-4" />
+                    {selectedRole ? 'Actualizar Rol' : 'Crear Rol'}
                   </button>
                 </div>
               </form>
