@@ -34,6 +34,7 @@ const Dashboard: React.FC = () => {
     avgOccupancy: 0
   });
   const [loading, setLoading] = useState(true);
+  const [tripsData, setTripsData] = useState<any[]>([]);
 
   const [dateFilterType, setDateFilterType] = useState<DateFilterType>('month');
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
@@ -93,7 +94,8 @@ const Dashboard: React.FC = () => {
           .from('trips')
           .select('*')
           .gte('start_time', startDate)
-          .lte('start_time', endDate + 'T23:59:59'),
+          .lte('start_time', endDate + 'T23:59:59')
+          .order('start_time', { ascending: true }),
         supabase
           .from('operational_incidents')
           .select('*')
@@ -140,6 +142,8 @@ const Dashboard: React.FC = () => {
         incidentsCost,
         avgOccupancy
       });
+
+      setTripsData(trips);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     }
@@ -239,26 +243,63 @@ const Dashboard: React.FC = () => {
       { name: 'QR', value: stats.totalRevenue * 0.20, color: '#8b5cf6' }
     ];
 
+    const revenueByDateData = tripsData.reduce((acc: any[], trip) => {
+      const date = format(new Date(trip.start_time), 'dd/MM');
+      const existing = acc.find(item => item.date === date);
+      if (existing) {
+        existing.ingresos += Number(trip.revenue || 0);
+        existing.pasajeros += Number(trip.passenger_count || 0);
+      } else {
+        acc.push({
+          date,
+          ingresos: Number(trip.revenue || 0),
+          pasajeros: Number(trip.passenger_count || 0)
+        });
+      }
+      return acc;
+    }, []);
+
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h3 className="text-sm font-medium text-gray-500 mb-2">Ingresos Totales</h3>
             <p className="text-3xl font-bold text-gray-900">{formatGuarani(stats.totalRevenue)}</p>
-            <p className="text-sm text-green-600 mt-1">+15% vs mes anterior</p>
+            <p className="text-sm text-gray-600 mt-1">{stats.totalPassengers} pasajeros</p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h3 className="text-sm font-medium text-gray-500 mb-2">Costos Totales</h3>
             <p className="text-3xl font-bold text-gray-900">{formatGuarani(stats.maintenanceCost + stats.expensesCost + stats.incidentsCost)}</p>
-            <p className="text-sm text-yellow-600 mt-1">+8% vs mes anterior</p>
+            <p className="text-sm text-yellow-600 mt-1">Gastos operativos</p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h3 className="text-sm font-medium text-gray-500 mb-2">Utilidad Neta</h3>
             <p className="text-3xl font-bold text-gray-900">
               {formatGuarani(stats.totalRevenue - (stats.maintenanceCost + stats.expensesCost + stats.incidentsCost))}
             </p>
-            <p className="text-sm text-green-600 mt-1">Margen: 42%</p>
+            <p className="text-sm text-green-600 mt-1">Ingreso por pasajero: {formatGuarani(stats.totalPassengers > 0 ? stats.totalRevenue / stats.totalPassengers : 0)}</p>
           </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Movimiento de Ingresos por Pasajeros</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={revenueByDateData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis yAxisId="left" orientation="left" stroke="#10b981" />
+              <YAxis yAxisId="right" orientation="right" stroke="#3b82f6" />
+              <Tooltip
+                formatter={(value: number, name: string) => {
+                  if (name === 'ingresos') return formatGuarani(value);
+                  return value;
+                }}
+              />
+              <Legend />
+              <Line yAxisId="left" type="monotone" dataKey="ingresos" stroke="#10b981" strokeWidth={2} name="Ingresos" />
+              <Line yAxisId="right" type="monotone" dataKey="pasajeros" stroke="#3b82f6" strokeWidth={2} name="Pasajeros" />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -280,25 +321,24 @@ const Dashboard: React.FC = () => {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip formatter={(value: number) => formatGuarani(value)} />
               </PieChart>
             </ResponsiveContainer>
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Costo por Kilómetro</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Desglose de Costos</h3>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={[
-                { category: 'Combustible', cost: 0.45 },
-                { category: 'Mantenimiento', cost: 0.25 },
-                { category: 'Peajes', cost: 0.15 },
-                { category: 'Sueldos', cost: 0.35 }
+                { category: 'Mantenimiento', costo: stats.maintenanceCost },
+                { category: 'Gastos', costo: stats.expensesCost },
+                { category: 'Incidentes', costo: stats.incidentsCost }
               ]}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="category" />
                 <YAxis />
-                <Tooltip />
-                <Bar dataKey="cost" fill="#f59e0b" />
+                <Tooltip formatter={(value: number) => formatGuarani(value)} />
+                <Bar dataKey="costo" fill="#f59e0b" />
               </BarChart>
             </ResponsiveContainer>
           </div>
