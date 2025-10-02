@@ -13,7 +13,6 @@ import {
   MapPin,
   UserCog
 } from 'lucide-react';
-import { usePermissions } from '../../contexts/PermissionsContext';
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -22,30 +21,18 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
   const location = useLocation();
-  const { permissions, hasPermission, loading } = usePermissions();
 
-  console.log('Sidebar permissions:', permissions);
-  console.log('Sidebar loading:', loading);
-
-  const allNavigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: Home, permission: 'dashboard' as const },
-    { name: 'Buses', href: '/buses', icon: Bus, permission: 'buses' as const },
-    { name: 'Pasajeros', href: '/passengers', icon: Users, permission: 'passengers' as const },
-    { name: 'Rastreo en Vivo', href: '/tracking', icon: MapPin, permission: 'tracking' as const },
-    { name: 'Inventario', href: '/inventory', icon: Package, permission: 'inventory' as const },
-    { name: 'Gastos', href: '/expenses', icon: CreditCard, permission: 'expenses' as const },
-    { name: 'Reportes', href: '/reports', icon: FileText, permission: 'reports' as const },
-    { name: 'Recursos Humanos', href: '/hr', icon: UserCog, permission: 'hr' as const },
-    { name: 'Configuración', href: '/configuration', icon: Settings, permission: 'configuration' as const },
+  const navigation = [
+    { name: 'Dashboard', href: '/dashboard', icon: Home },
+    { name: 'Buses', href: '/buses', icon: Bus },
+    { name: 'Pasajeros', href: '/passengers', icon: Users },
+    { name: 'Rastreo en Vivo', href: '/tracking', icon: MapPin },
+    { name: 'Inventario', href: '/inventory', icon: Package },
+    { name: 'Gastos', href: '/expenses', icon: CreditCard },
+    { name: 'Reportes', href: '/reports', icon: FileText },
+    { name: 'Recursos Humanos', href: '/hr', icon: UserCog },
+    { name: 'Configuración', href: '/configuration', icon: Settings },
   ];
-
-  const navigation = allNavigation.filter(item => {
-    const hasPerm = hasPermission(item.permission);
-    console.log(`Permission ${item.permission}: ${hasPerm}`);
-    return hasPerm;
-  });
-
-  console.log('Filtered navigation items:', navigation.length);
 
   const isActive = (href: string) => location.pathname === href;
 

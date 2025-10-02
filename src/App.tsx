@@ -14,7 +14,6 @@ import HumanResources from './pages/HumanResources';
 import Login from './pages/Login';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
-import { PermissionsProvider } from './contexts/PermissionsContext';
 
 function AppContent() {
   const { isAuthenticated } = useAuth();
@@ -55,13 +54,11 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <PermissionsProvider>
-        <DataProvider>
-          <Router>
-            <AppContent />
-          </Router>
-        </DataProvider>
-      </PermissionsProvider>
+      <DataProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </DataProvider>
     </AuthProvider>
   );
 }
