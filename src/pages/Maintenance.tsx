@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Wrench, Plus, Edit2, Trash2, Save, X, Calendar, DollarSign, AlertTriangle } from 'lucide-react';
+import { Wrench, Plus, CreditCard as Edit2, Trash2, Save, X, Calendar, DollarSign, AlertTriangle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { SortableTable } from '../components/SortableTable';
