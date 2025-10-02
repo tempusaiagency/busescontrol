@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Wrench, Plus, CreditCard as Edit2, Trash2, Save, X, Calendar, DollarSign, AlertTriangle } from 'lucide-react';
+import { Wrench, Plus, Edit2, Trash2, Save, X, Calendar, DollarSign, AlertTriangle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { SortableTable } from '../components/SortableTable';
+import { formatGuarani } from '../utils/currency';
 
 interface MaintenanceRecord {
   id: string;
@@ -260,7 +261,7 @@ const Maintenance: React.FC = () => {
       key: 'cost',
       label: 'Costo Total',
       render: (record: MaintenanceRecord) => (
-        <div className="text-sm font-medium text-gray-900">${Number(record.cost).toFixed(2)}</div>
+        <div className="text-sm font-medium text-gray-900">{formatGuarani(Number(record.cost))}</div>
       )
     },
     {
@@ -353,7 +354,7 @@ const Maintenance: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-orange-100 text-sm">Costo Total</p>
-                <p className="text-3xl font-bold">${totalCost.toFixed(2)}</p>
+                <p className="text-3xl font-bold">{formatGuarani(totalCost)}</p>
               </div>
               <DollarSign className="h-12 w-12 text-orange-200 opacity-80" />
             </div>

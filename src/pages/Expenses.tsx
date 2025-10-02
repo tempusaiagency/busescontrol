@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { CreditCard, Plus, Trash2, Filter, DollarSign, Fuel, Wrench, Car, Shield, User, MoreHorizontal } from 'lucide-react';
 import type { Expense } from '../contexts/DataContext';
+import { formatGuarani } from '../utils/currency';
 
 const Expenses: React.FC = () => {
   const { buses, expenses, addExpense, deleteExpense } = useData();

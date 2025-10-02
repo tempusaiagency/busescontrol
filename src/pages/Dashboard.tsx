@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ReportSelector, ReportCategory } from '../components/Dashboard/ReportSelector';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { formatGuarani } from '../utils/currency';
 
 interface DashboardStats {
   totalTrips: number;
@@ -11,6 +12,8 @@ interface DashboardStats {
   totalPassengers: number;
   totalIncidents: number;
   maintenanceCost: number;
+  expensesCost: number;
+  incidentsCost: number;
   avgOccupancy: number;
 }
 
@@ -23,6 +26,8 @@ const Dashboard: React.FC = () => {
     totalPassengers: 0,
     totalIncidents: 0,
     maintenanceCost: 0,
+    expensesCost: 0,
+    incidentsCost: 0,
     avgOccupancy: 0
   });
   const [loading, setLoading] = useState(true);
@@ -36,19 +41,23 @@ const Dashboard: React.FC = () => {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      const [tripsData, incidentsData, maintenanceData] = await Promise.all([
+      const [tripsData, incidentsData, maintenanceData, expensesData] = await Promise.all([
         supabase.from('trips').select('*'),
         supabase.from('operational_incidents').select('*'),
-        supabase.from('maintenance_records').select('cost')
+        supabase.from('maintenance_records').select('cost'),
+        supabase.from('expenses').select('*')
       ]);
 
       const trips = tripsData.data || [];
       const incidents = incidentsData.data || [];
       const maintenance = maintenanceData.data || [];
+      const expenses = expensesData.data || [];
 
       const totalRevenue = trips.reduce((sum, t) => sum + Number(t.revenue || 0), 0);
       const totalPassengers = trips.reduce((sum, t) => sum + Number(t.passenger_count || 0), 0);
       const maintenanceCost = maintenance.reduce((sum, m) => sum + Number(m.cost || 0), 0);
+      const expensesCost = expenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+      const incidentsCost = incidents.reduce((sum, i) => sum + Number(i.cost || 0), 0);
 
       const tripsWithSeats = trips.filter(t => t.seats_available > 0);
       const avgOccupancy = tripsWithSeats.length > 0
@@ -64,6 +73,8 @@ const Dashboard: React.FC = () => {
         totalPassengers,
         totalIncidents: incidents.length,
         maintenanceCost,
+        expensesCost,
+        incidentsCost,
         avgOccupancy
       });
     } catch (error) {
@@ -129,7 +140,7 @@ const Dashboard: React.FC = () => {
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h3 className="text-sm font-medium text-gray-500 mb-2">Ingreso por Pasajero</h3>
           <p className="text-3xl font-bold text-gray-900">
-            ${stats.totalPassengers > 0 ? (stats.totalRevenue / stats.totalPassengers).toFixed(2) : '0.00'}
+            {stats.totalPassengers > 0 ? formatGuarani(stats.totalRevenue / stats.totalPassengers) : formatGuarani(0)}
           </p>
           <p className="text-sm text-green-600 mt-1">+5% vs mes anterior</p>
         </div>
@@ -170,18 +181,18 @@ const Dashboard: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h3 className="text-sm font-medium text-gray-500 mb-2">Ingresos Totales</h3>
-            <p className="text-3xl font-bold text-gray-900">${stats.totalRevenue.toFixed(2)}</p>
+            <p className="text-3xl font-bold text-gray-900">{formatGuarani(stats.totalRevenue)}</p>
             <p className="text-sm text-green-600 mt-1">+15% vs mes anterior</p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h3 className="text-sm font-medium text-gray-500 mb-2">Costos Totales</h3>
-            <p className="text-3xl font-bold text-gray-900">${(stats.maintenanceCost * 1.3).toFixed(2)}</p>
+            <p className="text-3xl font-bold text-gray-900">{formatGuarani(stats.maintenanceCost + stats.expensesCost + stats.incidentsCost)}</p>
             <p className="text-sm text-yellow-600 mt-1">+8% vs mes anterior</p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h3 className="text-sm font-medium text-gray-500 mb-2">Utilidad Neta</h3>
             <p className="text-3xl font-bold text-gray-900">
-              ${(stats.totalRevenue - stats.maintenanceCost * 1.3).toFixed(2)}
+              {formatGuarani(stats.totalRevenue - (stats.maintenanceCost + stats.expensesCost + stats.incidentsCost))}
             </p>
             <p className="text-sm text-green-600 mt-1">Margen: 42%</p>
           </div>
@@ -238,7 +249,7 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h3 className="text-sm font-medium text-gray-500 mb-2">Costo Acumulado</h3>
-          <p className="text-3xl font-bold text-gray-900">${stats.maintenanceCost.toFixed(2)}</p>
+          <p className="text-3xl font-bold text-gray-900">{formatGuarani(stats.maintenanceCost)}</p>
           <p className="text-sm text-yellow-600 mt-1">+12% vs mes anterior</p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow-md">
