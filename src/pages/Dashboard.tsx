@@ -538,10 +538,6 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
         )}
-
-        <div className="mt-4 text-sm text-gray-600">
-          <strong>Período activo:</strong> {format(new Date(startDate), "dd/MM/yyyy")} - {format(new Date(endDate), \"dd/MM/yyyy")}
-        </div>
       </div>
 
       <ReportSelector selectedCategory={selectedCategory} onSelectCategory={setSelectedCategory} />
