@@ -35,6 +35,13 @@ const Dashboard: React.FC = () => {
   });
   const [loading, setLoading] = useState(true);
   const [tripsData, setTripsData] = useState<any[]>([]);
+  const [routeKmData, setRouteKmData] = useState<any[]>([]);
+  const [passengersByHourData, setPassengersByHourData] = useState<any[]>([]);
+  const [paymentMethodsData, setPaymentMethodsData] = useState<any[]>([]);
+  const [maintenanceByTypeData, setMaintenanceByTypeData] = useState<any[]>([]);
+  const [expensesData, setExpensesData] = useState<any[]>([]);
+  const [maintenanceData, setMaintenanceData] = useState<any[]>([]);
+  const [avgTripDuration, setAvgTripDuration] = useState(0);
 
   const [dateFilterType, setDateFilterType] = useState<DateFilterType>('month');
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
@@ -89,10 +96,10 @@ const Dashboard: React.FC = () => {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      const [tripsData, incidentsData, maintenanceData, expensesData] = await Promise.all([
+      const [tripsResult, incidentsData, maintenanceResult, expensesResult, routesResult] = await Promise.all([
         supabase
           .from('trips')
-          .select('*')
+          .select('*, routes(name, distance_km)')
           .gte('start_time', startDate)
           .lte('start_time', endDate + 'T23:59:59')
           .order('start_time', { ascending: true }),
@@ -103,20 +110,24 @@ const Dashboard: React.FC = () => {
           .lte('reported_at', endDate + 'T23:59:59'),
         supabase
           .from('maintenance_records')
-          .select('cost')
+          .select('*')
           .gte('scheduled_date', startDate)
           .lte('scheduled_date', endDate),
         supabase
           .from('expenses')
           .select('*')
           .gte('date', startDate)
-          .lte('date', endDate)
+          .lte('date', endDate),
+        supabase
+          .from('routes')
+          .select('*')
       ]);
 
-      const trips = tripsData.data || [];
+      const trips = tripsResult.data || [];
       const incidents = incidentsData.data || [];
-      const maintenance = maintenanceData.data || [];
-      const expenses = expensesData.data || [];
+      const maintenance = maintenanceResult.data || [];
+      const expenses = expensesResult.data || [];
+      const routes = routesResult.data || [];
 
       const totalRevenue = trips.reduce((sum, t) => sum + Number(t.revenue || 0), 0);
       const totalPassengers = trips.reduce((sum, t) => sum + Number(t.passenger_count || 0), 0);
@@ -144,6 +155,74 @@ const Dashboard: React.FC = () => {
       });
 
       setTripsData(trips);
+      setExpensesData(expenses);
+      setMaintenanceData(maintenance);
+
+      // Calculate route kilometers
+      const routeKmMap = new Map();
+      trips.forEach((trip: any) => {
+        if (trip.routes && trip.distance_km) {
+          const routeName = trip.routes.name || 'Sin Ruta';
+          const currentKm = routeKmMap.get(routeName) || 0;
+          routeKmMap.set(routeName, currentKm + Number(trip.distance_km));
+        }
+      });
+      const routeKm = Array.from(routeKmMap.entries()).map(([route, km]) => ({
+        route: route.replace('Ruta ', '').split(' -')[0],
+        km: Math.round(km)
+      }));
+      setRouteKmData(routeKm);
+
+      // Calculate passengers by hour
+      const hourMap = new Map();
+      trips.forEach((trip: any) => {
+        if (trip.start_time) {
+          const hour = new Date(trip.start_time).getHours();
+          const hourLabel = `${hour}:00`;
+          const current = hourMap.get(hourLabel) || 0;
+          hourMap.set(hourLabel, current + Number(trip.passenger_count || 0));
+        }
+      });
+      const passengersByHour = Array.from(hourMap.entries())
+        .map(([hour, passengers]) => ({ hour, passengers }))
+        .sort((a, b) => parseInt(a.hour) - parseInt(b.hour));
+      setPassengersByHourData(passengersByHour);
+
+      // Calculate payment methods from trips
+      const totalCash = trips.reduce((sum: number, t: any) => sum + Number(t.payment_method_cash || 0), 0);
+      const totalCard = trips.reduce((sum: number, t: any) => sum + Number(t.payment_method_card || 0), 0);
+      const totalQR = trips.reduce((sum: number, t: any) => sum + Number(t.payment_method_qr || 0), 0);
+      setPaymentMethodsData([
+        { name: 'Efectivo', value: totalCash, color: '#10b981' },
+        { name: 'Tarjeta', value: totalCard, color: '#3b82f6' },
+        { name: 'QR', value: totalQR, color: '#8b5cf6' }
+      ]);
+
+      // Calculate maintenance by type
+      const maintenanceTypeMap = new Map();
+      maintenance.forEach((m: any) => {
+        const type = m.type || 'other';
+        const count = maintenanceTypeMap.get(type) || 0;
+        maintenanceTypeMap.set(type, count + 1);
+      });
+      const maintenanceByType = Array.from(maintenanceTypeMap.entries()).map(([type, count]) => ({
+        type: type.charAt(0).toUpperCase() + type.slice(1),
+        count
+      }));
+      setMaintenanceByTypeData(maintenanceByType);
+
+      // Calculate average trip duration
+      const tripsWithDuration = trips.filter((t: any) => t.start_time && t.end_time);
+      if (tripsWithDuration.length > 0) {
+        const avgDuration = tripsWithDuration.reduce((sum: number, t: any) => {
+          const start = new Date(t.start_time).getTime();
+          const end = new Date(t.end_time).getTime();
+          return sum + (end - start);
+        }, 0) / tripsWithDuration.length;
+        setAvgTripDuration(Math.round(avgDuration / 60000));
+      } else {
+        setAvgTripDuration(0);
+      }
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     }
@@ -160,34 +239,31 @@ const Dashboard: React.FC = () => {
         </div>
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h3 className="text-sm font-medium text-gray-500 mb-2">Tiempo Promedio</h3>
-          <p className="text-3xl font-bold text-gray-900">45 min</p>
-          <p className="text-sm text-green-600 mt-1">-5% vs mes anterior</p>
+          <p className="text-3xl font-bold text-gray-900">{avgTripDuration} min</p>
+          <p className="text-sm text-gray-500 mt-1">Por viaje</p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h3 className="text-sm font-medium text-gray-500 mb-2">Incidencias</h3>
           <p className="text-3xl font-bold text-gray-900">{stats.totalIncidents}</p>
-          <p className="text-sm text-yellow-600 mt-1">3 activas</p>
+          <p className="text-sm text-gray-500 mt-1">Reportadas</p>
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Kilómetros Recorridos por Ruta</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={[
-            { route: 'Ruta A', km: 1250 },
-            { route: 'Ruta B', km: 980 },
-            { route: 'Ruta C', km: 1450 },
-            { route: 'Ruta D', km: 750 }
-          ]}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="route" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="km" fill="#3b82f6" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      {routeKmData.length > 0 && (
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Kilómetros Recorridos por Ruta</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={routeKmData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="route" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="km" fill="#3b82f6" name="Kilómetros" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 
@@ -197,51 +273,41 @@ const Dashboard: React.FC = () => {
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h3 className="text-sm font-medium text-gray-500 mb-2">Pasajeros Totales</h3>
           <p className="text-3xl font-bold text-gray-900">{stats.totalPassengers}</p>
-          <p className="text-sm text-green-600 mt-1">+8% vs mes anterior</p>
+          <p className="text-sm text-gray-500 mt-1">En {stats.totalTrips} viajes</p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h3 className="text-sm font-medium text-gray-500 mb-2">Ocupación Promedio</h3>
           <p className="text-3xl font-bold text-gray-900">{stats.avgOccupancy.toFixed(1)}%</p>
-          <p className="text-sm text-green-600 mt-1">+3% vs mes anterior</p>
+          <p className="text-sm text-gray-500 mt-1">De capacidad total</p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h3 className="text-sm font-medium text-gray-500 mb-2">Ingreso por Pasajero</h3>
           <p className="text-3xl font-bold text-gray-900">
             {stats.totalPassengers > 0 ? formatGuarani(stats.totalRevenue / stats.totalPassengers) : formatGuarani(0)}
           </p>
-          <p className="text-sm text-green-600 mt-1">+5% vs mes anterior</p>
+          <p className="text-sm text-gray-500 mt-1">Promedio por viaje</p>
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Tendencia de Pasajeros por Hora</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={[
-            { hour: '6am', passengers: 45 },
-            { hour: '9am', passengers: 120 },
-            { hour: '12pm', passengers: 85 },
-            { hour: '3pm', passengers: 95 },
-            { hour: '6pm', passengers: 150 },
-            { hour: '9pm', passengers: 40 }
-          ]}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="hour" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Line type="monotone" dataKey="passengers" stroke="#10b981" strokeWidth={2} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      {passengersByHourData.length > 0 && (
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Pasajeros por Hora de Salida</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={passengersByHourData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="hour" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="passengers" stroke="#10b981" strokeWidth={2} name="Pasajeros" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 
   const renderFinanceReport = () => {
-    const paymentMethodsData = [
-      { name: 'Efectivo', value: stats.totalRevenue * 0.45, color: '#10b981' },
-      { name: 'Tarjeta', value: stats.totalRevenue * 0.35, color: '#3b82f6' },
-      { name: 'QR', value: stats.totalRevenue * 0.20, color: '#8b5cf6' }
-    ];
 
     const revenueByDateData = tripsData.reduce((acc: any[], trip) => {
       const date = format(new Date(trip.start_time), 'dd/MM');
@@ -303,28 +369,30 @@ const Dashboard: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Métodos de Pago</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={paymentMethodsData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {paymentMethodsData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value: number) => formatGuarani(value)} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+          {paymentMethodsData.length > 0 && paymentMethodsData.some(p => p.value > 0) && (
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Métodos de Pago</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={paymentMethodsData.filter(p => p.value > 0)}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {paymentMethodsData.filter(p => p.value > 0).map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => formatGuarani(value)} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          )}
 
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Desglose de Costos</h3>
@@ -353,39 +421,37 @@ const Dashboard: React.FC = () => {
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h3 className="text-sm font-medium text-gray-500 mb-2">Costo Acumulado</h3>
           <p className="text-3xl font-bold text-gray-900">{formatGuarani(stats.maintenanceCost)}</p>
-          <p className="text-sm text-yellow-600 mt-1">+12% vs mes anterior</p>
+          <p className="text-sm text-gray-500 mt-1">{maintenanceData.length} registros</p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-sm font-medium text-gray-500 mb-2">Tiempo Fuera de Servicio</h3>
-          <p className="text-3xl font-bold text-gray-900">48 hrs</p>
-          <p className="text-sm text-green-600 mt-1">-15% vs mes anterior</p>
+          <h3 className="text-sm font-medium text-gray-500 mb-2">Mantenimientos</h3>
+          <p className="text-3xl font-bold text-gray-900">{maintenanceData.length}</p>
+          <p className="text-sm text-gray-500 mt-1">Total de registros</p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-sm font-medium text-gray-500 mb-2">Cumplimiento</h3>
-          <p className="text-3xl font-bold text-gray-900">87%</p>
-          <p className="text-sm text-green-600 mt-1">+5% vs mes anterior</p>
+          <h3 className="text-sm font-medium text-gray-500 mb-2">Costo Promedio</h3>
+          <p className="text-3xl font-bold text-gray-900">
+            {maintenanceData.length > 0 ? formatGuarani(stats.maintenanceCost / maintenanceData.length) : formatGuarani(0)}
+          </p>
+          <p className="text-sm text-gray-500 mt-1">Por mantenimiento</p>
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Fallas por Tipo</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={[
-            { type: 'Motor', count: 3 },
-            { type: 'Frenos', count: 5 },
-            { type: 'Neumáticos', count: 8 },
-            { type: 'Eléctrico', count: 2 },
-            { type: 'Suspensión', count: 4 }
-          ]}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="type" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="count" fill="#f97316" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      {maintenanceByTypeData.length > 0 && (
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Mantenimientos por Tipo</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={maintenanceByTypeData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="type" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="count" fill="#f97316" name="Cantidad" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 
