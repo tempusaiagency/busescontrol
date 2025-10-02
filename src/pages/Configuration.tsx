@@ -136,6 +136,7 @@ const Configuration: React.FC = () => {
         .order('name');
 
       if (error) throw error;
+      console.log('Roles loaded:', data);
       setRoles(data || []);
     } catch (error) {
       console.error('Error loading roles:', error);
@@ -165,6 +166,7 @@ const Configuration: React.FC = () => {
           email: u.email || '',
           created_at: u.created_at
         }));
+        console.log('Users loaded:', userList);
         setUsers(userList);
       }
     } catch (error) {
@@ -180,6 +182,7 @@ const Configuration: React.FC = () => {
         .order('assigned_at', { ascending: false });
 
       if (error) throw error;
+      console.log('Role assignments loaded:', data);
       setRoleAssignments(data || []);
     } catch (error) {
       console.error('Error loading role assignments:', error);
@@ -400,10 +403,12 @@ const Configuration: React.FC = () => {
   };
 
   const getUserRoles = (userId: string) => {
-    return roleAssignments
-      .filter(assignment => assignment.user_id === userId)
+    const userAssignments = roleAssignments.filter(assignment => assignment.user_id === userId);
+    const userRoles = userAssignments
       .map(assignment => roles.find(role => role.id === assignment.role_id))
       .filter(role => role !== undefined) as UserRole[];
+    console.log('Getting roles for user:', userId, 'Assignments:', userAssignments, 'Roles:', userRoles);
+    return userRoles;
   };
 
   if (loading) {
