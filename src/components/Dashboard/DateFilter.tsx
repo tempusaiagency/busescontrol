@@ -129,7 +129,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({
             <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
           </div>
           <p className="text-xs text-gray-500 mt-2">
-            Mostrando datos desde {format(new Date(startDate), 'dd/MM/yyyy')} hasta {format(new Date(endDate), 'dd/MM/yyyy')}
+            Mostrando datos desde {startDate.split('-').reverse().join('/')} hasta {endDate.split('-').reverse().join('/')}
           </p>
         </div>
       )}
@@ -146,7 +146,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none bg-white"
             >
               {Array.from({ length: 10 }, (_, i) => {
-                const year = new Date().getFullYear() - i + 1;
+                const year = 2025 - i;
                 return (
                   <option key={year} value={year}>
                     {year}
@@ -189,7 +189,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({
             </div>
           </div>
           <p className="text-xs text-gray-500 mt-3">
-            Rango: {format(new Date(startDate), 'dd/MM/yyyy')} - {format(new Date(endDate), 'dd/MM/yyyy')}
+            Rango: {startDate.split('-').reverse().join('/')} - {endDate.split('-').reverse().join('/')}
           </p>
         </div>
       )}
