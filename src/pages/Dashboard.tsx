@@ -44,10 +44,10 @@ const Dashboard: React.FC = () => {
   const [avgTripDuration, setAvgTripDuration] = useState(0);
 
   const [dateFilterType, setDateFilterType] = useState<DateFilterType>('month');
-  const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
-  const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
-  const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
-  const [selectedYear, setSelectedYear] = useState(format(new Date(), 'yyyy'));
+  const [startDate, setStartDate] = useState('2025-09-01');
+  const [endDate, setEndDate] = useState('2025-09-30');
+  const [selectedMonth, setSelectedMonth] = useState('2025-09');
+  const [selectedYear, setSelectedYear] = useState('2025');
 
   useEffect(() => {
     if (user) {
