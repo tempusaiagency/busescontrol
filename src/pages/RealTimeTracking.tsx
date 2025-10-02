@@ -37,8 +37,14 @@ const RealTimeTracking: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) {
+      console.error('Google Maps API key not found');
+      return;
+    }
+
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}`;
     script.async = true;
     script.onload = () => {
       setMapLoaded(true);
@@ -213,12 +219,6 @@ const RealTimeTracking: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-        <p className="text-sm text-yellow-800">
-          <strong>Nota:</strong> Para activar Google Maps, necesitas agregar tu API Key de Google Maps en el archivo RealTimeTracking.tsx.
-          Obtén tu API Key desde <a href="https://console.cloud.google.com/google/maps-apis" target="_blank" rel="noopener noreferrer" className="underline">Google Cloud Console</a>.
-        </p>
-      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
