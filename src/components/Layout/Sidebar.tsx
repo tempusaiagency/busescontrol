@@ -12,7 +12,8 @@ import {
   Settings,
   MapPin,
   UserCog,
-  Wrench
+  Wrench,
+  Brain
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -32,6 +33,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     { name: 'Gastos', href: '/expenses', icon: CreditCard },
     { name: 'Mantenimiento', href: '/maintenance', icon: Wrench },
     { name: 'Reportes', href: '/reports', icon: FileText },
+    { name: 'Analítica con IA', href: '/ai-analytics', icon: Brain },
     { name: 'Recursos Humanos', href: '/hr', icon: UserCog },
     { name: 'Configuración', href: '/configuration', icon: Settings },
   ];

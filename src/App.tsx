@@ -12,6 +12,7 @@ import Configuration from './pages/Configuration';
 import RealTimeTracking from './pages/RealTimeTracking';
 import HumanResources from './pages/HumanResources';
 import Maintenance from './pages/Maintenance';
+import AIAnalytics from './pages/AIAnalytics';
 import Login from './pages/Login';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
@@ -42,6 +43,7 @@ function AppContent() {
               <Route path="/expenses" element={<Expenses />} />
               <Route path="/maintenance" element={<Maintenance />} />
               <Route path="/reports" element={<Reports />} />
+              <Route path="/ai-analytics" element={<AIAnalytics />} />
               <Route path="/configuration" element={<Configuration />} />
               <Route path="/tracking" element={<RealTimeTracking />} />
               <Route path="/hr" element={<HumanResources />} />
