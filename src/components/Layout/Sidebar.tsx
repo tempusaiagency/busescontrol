@@ -13,7 +13,8 @@ import {
   MapPin,
   UserCog,
   Wrench,
-  Brain
+  Brain,
+  MessageSquare
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -34,6 +35,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     { name: 'Mantenimiento', href: '/maintenance', icon: Wrench },
     { name: 'Reportes', href: '/reports', icon: FileText },
     { name: 'Analítica con IA', href: '/ai-analytics', icon: Brain },
+    { name: 'Asistente IA', href: '/chat-assistant', icon: MessageSquare },
     { name: 'Recursos Humanos', href: '/hr', icon: UserCog },
     { name: 'Configuración', href: '/configuration', icon: Settings },
   ];
