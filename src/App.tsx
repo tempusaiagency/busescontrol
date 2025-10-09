@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Sidebar from './components/Layout/Sidebar';
 import Header from './components/Layout/Header';
 import Dashboard from './pages/Dashboard';
@@ -14,6 +14,8 @@ import HumanResources from './pages/HumanResources';
 import Maintenance from './pages/Maintenance';
 import AIAnalytics from './pages/AIAnalytics';
 import ChatAssistant from './pages/ChatAssistant';
+import DriverInterface from './pages/DriverInterface';
+import PassengerDisplay from './pages/PassengerDisplay';
 import Login from './pages/Login';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
@@ -21,6 +23,18 @@ import { DataProvider } from './contexts/DataContext';
 function AppContent() {
   const { isAuthenticated } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
+
+  const isPassengerDisplay = location.pathname === '/passenger-display';
+  const isDriverInterface = location.pathname === '/driver';
+
+  if (isPassengerDisplay) {
+    return <PassengerDisplay />;
+  }
+
+  if (isDriverInterface) {
+    return <DriverInterface />;
+  }
 
   if (!isAuthenticated) {
     return <Login />;
@@ -29,10 +43,10 @@ function AppContent() {
   return (
     <div className="flex h-screen bg-gray-100">
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-      
+
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header setSidebarOpen={setSidebarOpen} />
-        
+
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100">
           <div className="container mx-auto px-6 py-8">
             <Routes>
