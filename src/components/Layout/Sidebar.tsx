@@ -14,7 +14,9 @@ import {
   UserCog,
   Wrench,
   Brain,
-  MessageSquare
+  MessageSquare,
+  DollarSign,
+  List
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -28,6 +30,8 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Buses', href: '/buses', icon: Bus },
+    { name: 'Cobro Automático', href: '/driver-fare-auto', icon: DollarSign },
+    { name: 'Gestión de Tarifas', href: '/fare-management', icon: List },
     { name: 'Pasajeros', href: '/passengers', icon: Users },
     { name: 'Rastreo en Vivo', href: '/tracking', icon: MapPin },
     { name: 'Inventario', href: '/inventory', icon: Package },

@@ -14,7 +14,8 @@ import HumanResources from './pages/HumanResources';
 import Maintenance from './pages/Maintenance';
 import AIAnalytics from './pages/AIAnalytics';
 import ChatAssistant from './pages/ChatAssistant';
-import DriverInterface from './pages/DriverInterface';
+import DriverFareAuto from './pages/DriverFareAuto';
+import FareManagement from './pages/FareManagement';
 import PassengerDisplay from './pages/PassengerDisplay';
 import Login from './pages/Login';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -63,6 +64,7 @@ function AppContent() {
               <Route path="/configuration" element={<Configuration />} />
               <Route path="/tracking" element={<RealTimeTracking />} />
               <Route path="/hr" element={<HumanResources />} />
+              <Route path="/fare-management" element={<FareManagement />} />
             </Routes>
           </div>
         </main>
